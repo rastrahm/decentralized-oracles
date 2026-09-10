@@ -1,0 +1,31 @@
+# .cursorrules — Module 13: Decentralized Oracles & Pyth/Chainlink Push-Pull Patterns
+
+## MODULE OVERVIEW
+Focus on building a resilient decentralized price oracle consumer and custom mock oracle aggregator supporting both Push (Chainlink `AggregatorV3Interface`) and Pull (Pyth `IPyth` / On-Demand cryptographic proof verification) architectures using Foundry and Solidity 0.8.24.
+
+---
+
+## 1. TECHNICAL CONSTRAINTS & STACK
+
+- **Compiler Version:** Strictly `pragma solidity 0.8.24;` (no floating pragmas).
+- **Tooling:** Foundry (`forge` for unit testing, mainnet fork price feed testing, and cryptographic proof verification).
+- **Standards:** Implement standard price feed interfaces (`AggregatorV3Interface` & Pyth price update attestation handling).
+- **Time Constraints:** Strict staleness validation (`updatedAt > block.timestamp - MAX_STALENESS_THRESHOLD`).
+
+---
+
+## 2. CODING & SECURITY RULES
+
+- **Staleness Guard:** Reject any oracle response where `answeredInRound < roundId`, `updatedAt == 0`, or prices are stale (`block.timestamp - updatedAt > MAX_DELAY`).
+- **Validation Bounds:** Enforce lower and upper bounds (`minAnswer` / `maxAnswer`) to protect against flash crash circuit breaks or zero-price exploits.
+- **Pull Oracle Verification:** In Pyth/Pull flows, parse price update payload bytes, verify relayer attestation signatures, and deduct required update fee (`pyth.getUpdateFee()`) before reading state.
+- **Custom Errors:** Use explicit custom errors (`error StalePriceFeed()`, `error InvalidOraclePrice()`, `error OracleRoundIncomplete()`, `error InsufficientFee()`).
+
+---
+
+## 3. TESTING REQUIREMENTS
+
+- **Foundry Unit & Fork Tests:** Test live mainnet price feed consumption via fork tests and simulate Pyth price attestation payload processing.
+- **Stale Price Invalidation:** Test that manipulated or expired timestamps trigger explicit reverts.
+- **Zero & Negative Price Protections:** Assert that invalid, zero, or negative price responses from oracle mocks fail safely.
+- **Fuzzing Tests:** Fuzz oracle answers, decimal precision scaling (8 decimals vs. 18 decimals), and delay intervals.
