@@ -9,10 +9,10 @@
 | [diagrama-de-flujo.md](./diagrama-de-flujo.md) | Flujos de decisión (staleness, bounds, fees, rounds) |
 | [flujograma.md](./flujograma.md) | Ciclo e2e Push (Chainlink) y Pull (Pyth) |
 
-**Estado:** Fases **0–3** ✅. Fases **4–6** ⏳ pendientes de autorización.
+**Estado:** Fases **0–4** ✅. Fases **5–6** ⏳ pendientes de autorización.
 
 **Regla:** no se escribe código de una fase hasta que digas explícitamente *“autorizo Fase N”*.
 
-**Artefactos:** libs · mocks · `ChainlinkPriceFeed` (Push)  
+**Artefactos:** `ChainlinkPriceFeed` (Push) · `PythPriceFeed` (Pull) · mocks · libs  
 **Deps:** OZ **v5.2.0** · Chainlink brownie **1.3.0** · Pyth SDK **4.2.0** · Solidity **`0.8.24`** · Foundry  
-**Tests:** `forge test` → **65 PASS**
+**Tests:** `forge test` → **81 PASS**

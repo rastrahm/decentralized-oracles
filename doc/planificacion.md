@@ -1,6 +1,6 @@
 # Planificación — Módulo 13: Decentralized Oracles & Pyth/Chainlink Push-Pull
 
-**Estado:** Fases **0–3** ✅ completadas. Fases **4–6** ⏳ pendientes de autorización.  
+**Estado:** Fases **0–4** ✅ completadas. Fases **5–6** ⏳ pendientes de autorización.  
 **Regla de avance:** cada fase requiere **autorización explícita** del responsable antes de empezar.
 
 ---
@@ -143,11 +143,11 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 | 1 | Interfaces + errors + `OracleValidationLib` + `PriceScalerLib` | ✅ Completada | ✅ Autorizada |
 | 2 | `MockAggregatorV3` + `MockPyth` | ✅ Completada | ✅ Autorizada |
 | 3 | `ChainlinkPriceFeed` (Push + validaciones) | ✅ Completada | ✅ Autorizada |
-| 4 | `PythPriceFeed` (Pull + fee + update) | ⏳ Pendiente | ❌ Sin autorizar |
+| 4 | `PythPriceFeed` (Pull + fee + update) | ✅ Completada | ✅ Autorizada |
 | 5 | `PriceOracleConsumer` + suite e2e / fork / fuzz | ⏳ Pendiente | ❌ Sin autorizar |
 | 6 | Gas profiling + Deploy + NatSpec / SWC hardening | ⏳ Pendiente | ❌ Sin autorizar |
 
-> **Próxima autorización solicitada:** *Fase 4* (`PythPriceFeed` Pull).
+> **Próxima autorización solicitada:** *Fase 5* (consumer + fork + fuzz).
 
 ---
 
@@ -236,7 +236,7 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ---
 
-### Fase 4 — PythPriceFeed (Pull) ⏳
+### Fase 4 — PythPriceFeed (Pull) ✅
 
 **Objetivo:** actualización on-demand con fee y verificación vía mock/contrato Pyth.
 
@@ -246,7 +246,13 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 **Criterio de salida:** Pull e2e con mock; rechazos de fee/staleness/bounds cubiertos.
 
-**Autorización:** esperar *“autorizo Fase 4”*.
+**Hecho (2026-09-10):**
+- `PythPriceFeed`: immutables `pyth`, `priceId`, `maxAge`, bounds, `decimals`; implementa `IPriceFeed`.
+- `updateAndGetPrice`: check fee → `updatePriceFeeds` → `_readAndValidate` → refund exceso (`EthTransferFailed` si falla).
+- `getValidatedPrice`: lectura view post-update con `OracleValidationLib.validatePullPrice`.
+- Error nuevo: `EthTransferFailed` en `OracleErrors`.
+- Tests: fee, refund, stale, bounds, zero/negativo, fuzz.
+- **`forge test` → 81 PASS**.
 
 ---
 
@@ -337,6 +343,6 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ## 12. Próximo paso
 
-**Fases 0–3 cerradas.** Esperando autorización de **Fase 4** (`PythPriceFeed` Pull + fee + update).
+**Fases 0–4 cerradas.** Esperando autorización de **Fase 5** (`PriceOracleConsumer` + e2e / fork / fuzz).
 
-Responde con: **`autorizo Fase 4`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
+Responde con: **`autorizo Fase 5`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
