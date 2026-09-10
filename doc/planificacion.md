@@ -1,6 +1,6 @@
 # Planificación — Módulo 13: Decentralized Oracles & Pyth/Chainlink Push-Pull
 
-**Estado:** Documentación inicial creada. Fases **0–6** ⏳ sin autorizar.  
+**Estado:** Fase **0** ✅ completada. Fases **1–6** ⏳ pendientes de autorización.  
 **Regla de avance:** cada fase requiere **autorización explícita** del responsable antes de empezar.
 
 ---
@@ -139,7 +139,7 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 | Fase | Nombre | Estado | Autorización |
 |------|--------|--------|--------------|
-| 0 | Setup Foundry + estructura + deps Chainlink/Pyth | ⏳ Pendiente | ❌ Sin autorizar |
+| 0 | Setup Foundry + estructura + deps Chainlink/Pyth | ✅ Completada | ✅ Autorizada |
 | 1 | Interfaces + errors + `OracleValidationLib` + `PriceScalerLib` | ⏳ Pendiente | ❌ Sin autorizar |
 | 2 | `MockAggregatorV3` + `MockPyth` | ⏳ Pendiente | ❌ Sin autorizar |
 | 3 | `ChainlinkPriceFeed` (Push + validaciones) | ⏳ Pendiente | ❌ Sin autorizar |
@@ -147,14 +147,13 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 | 5 | `PriceOracleConsumer` + suite e2e / fork / fuzz | ⏳ Pendiente | ❌ Sin autorizar |
 | 6 | Gas profiling + Deploy + NatSpec / SWC hardening | ⏳ Pendiente | ❌ Sin autorizar |
 
-> **Doc gate (esta entrega):** la carpeta `doc/` con plan + diagramas ya está creada.  
-> **Próxima autorización solicitada:** *Fase 0* (setup Foundry).
+> **Próxima autorización solicitada:** *Fase 1* (interfaces + libs de validación).
 
 ---
 
 ## 7. Detalle por fase
 
-### Fase 0 — Setup Foundry ⏳
+### Fase 0 — Setup Foundry ✅
 
 **Objetivo:** repo compilable con tooling y dependencias de oráculos fijadas.
 
@@ -165,7 +164,15 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 **Criterio de salida:** `forge build` OK; versiones de deps escritas en esta sección.
 
-**Autorización:** esperar *“autorizo Fase 0”*.
+**Hecho (2026-09-10):**
+- `foundry.toml` (solc `0.8.24`, Cancun, optimizer, fuzz `runs = 1000`, `[rpc_endpoints].mainnet = ${MAINNET_RPC_URL}`) + `remappings.txt`.
+- Dependencias en `lib/` (gitignored): `forge-std`, OpenZeppelin **v5.2.0**, `chainlink-brownie-contracts` **1.3.0** (`AggregatorV3Interface`).
+- Pyth vía npm (oficial): `@pythnetwork/pyth-sdk-solidity` **4.2.0** (`IPyth`, `MockPyth`, etc.) + `package.json` / `package-lock.json`.
+- Carpetas `src/{consumer,feeds,mocks,libraries,interfaces,errors}`, `test/{helpers,fork,fuzz,gas}`, `script/`, `.env.example`.
+- Stub `src/Placeholder.sol` + smoke `test/Placeholder.t.sol` (incluye check de remappings).
+- Stub `script/Deploy.s.sol` (Fase 6).
+- `forge build` y `forge test` en verde (**2 PASS**).
+- Nota: usar `~/.foundry/bin/forge` (el `forge` de nvm/npm no es Foundry).
 
 ---
 
@@ -314,6 +321,6 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ## 12. Próximo paso
 
-**Esperando autorización de Fase 0** (setup Foundry + estructura + deps).
+**Fase 0 cerrada.** Esperando autorización de **Fase 1** (interfaces + `OracleErrors` + `OracleValidationLib` + `PriceScalerLib`).
 
-Responde con: **`autorizo Fase 0`** para iniciar el scaffold. No se implementará código de fases posteriores sin un gate explícito nuevo.
+Responde con: **`autorizo Fase 1`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.

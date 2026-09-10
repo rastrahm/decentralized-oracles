@@ -1,0 +1,9 @@
+{
+  "name": "13-decentralized-oracles",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Module 13 — Chainlink Push / Pyth Pull oracle consumer (Foundry)",
+  "dependencies": {
+    "@pythnetwork/pyth-sdk-solidity": "4.2.0"
+  }
+}
