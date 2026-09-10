@@ -1,6 +1,6 @@
 # Planificación — Módulo 13: Decentralized Oracles & Pyth/Chainlink Push-Pull
 
-**Estado:** Fases **0–4** ✅ completadas. Fases **5–6** ⏳ pendientes de autorización.  
+**Estado:** Fases **0–5** ✅ completadas. Fase **6** ⏳ pendiente de autorización.  
 **Regla de avance:** cada fase requiere **autorización explícita** del responsable antes de empezar.
 
 ---
@@ -144,10 +144,10 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 | 2 | `MockAggregatorV3` + `MockPyth` | ✅ Completada | ✅ Autorizada |
 | 3 | `ChainlinkPriceFeed` (Push + validaciones) | ✅ Completada | ✅ Autorizada |
 | 4 | `PythPriceFeed` (Pull + fee + update) | ✅ Completada | ✅ Autorizada |
-| 5 | `PriceOracleConsumer` + suite e2e / fork / fuzz | ⏳ Pendiente | ❌ Sin autorizar |
+| 5 | `PriceOracleConsumer` + suite e2e / fork / fuzz | ✅ Completada | ✅ Autorizada |
 | 6 | Gas profiling + Deploy + NatSpec / SWC hardening | ⏳ Pendiente | ❌ Sin autorizar |
 
-> **Próxima autorización solicitada:** *Fase 5* (consumer + fork + fuzz).
+> **Próxima autorización solicitada:** *Fase 6* (gas + deploy + SWC).
 
 ---
 
@@ -256,7 +256,7 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ---
 
-### Fase 5 — Consumer + fork + fuzz ⏳
+### Fase 5 — Consumer + fork + fuzz ✅
 
 **Objetivo:** requisitos de testing del `.cursorrules` del módulo.
 
@@ -269,7 +269,13 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 **Criterio de salida:** `forge test` verde; fork documentado (RPC); fuzz ≥ 1000 runs.
 
-**Autorización:** esperar *“autorizo Fase 5”*.
+**Hecho (2026-09-10):**
+- `PriceOracleConsumer`: `getPushPrice`, `getPullPrice`, scaled18; fee exacto al Pull + refund al caller.
+- E2E: `PriceOracleConsumer.t.sol` (push/pull, stale, zero/neg, fee, refund).
+- Fork: `test/fork/ChainlinkMainnet.fork.t.sol` — ETH/USD `0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419`; skip sin `MAINNET_RPC_URL`.
+- Fuzz: `test/fuzz/Oracle.fuzz.t.sol` (answers, delays, rounds, scale 8↔18).
+- Helper: `test/helpers/OracleTestBase.sol`.
+- **`forge test` → 96 PASS**, 3 SKIP (fork sin RPC).
 
 ---
 
@@ -302,14 +308,14 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ## 9. Seguridad (checklist vivo)
 
-- [ ] Staleness: `block.timestamp - updatedAt > MAX_DELAY` → revert.
-- [ ] `updatedAt == 0` → revert.
-- [ ] `answeredInRound < roundId` → revert.
-- [ ] Bounds `minAnswer` / `maxAnswer` y rechazo de precio ≤ 0.
-- [ ] Pull: fee pagado antes de leer estado post-update.
-- [ ] Custom errors del módulo.
-- [ ] Sin floating pragma; NatSpec en APIs públicas.
-- [ ] Suite fork + fuzz.
+- [x] Staleness: `block.timestamp - updatedAt > MAX_DELAY` → revert.
+- [x] `updatedAt == 0` → revert.
+- [x] `answeredInRound < roundId` → revert.
+- [x] Bounds `minAnswer` / `maxAnswer` y rechazo de precio ≤ 0.
+- [x] Pull: fee pagado antes de leer estado post-update.
+- [x] Custom errors del módulo.
+- [x] Sin floating pragma; NatSpec en APIs públicas.
+- [x] Suite fork + fuzz.
 - [ ] (Fase 6) SWC-AUDIT + gas.
 
 ---
@@ -330,19 +336,19 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ## 11. Criterios de aceptación del módulo
 
-1. [ ] Compila con `pragma solidity 0.8.24`.
-2. [ ] Push (Chainlink) y Pull (Pyth) operativos con tests.
-3. [ ] Precios stale / round incompleto / inválidos revierten con custom errors.
-4. [ ] Fee Pyth insuficiente → `InsufficientFee`.
-5. [ ] Fork test de feed mainnet en verde (con RPC).
-6. [ ] Fuzz de answers / delays / decimals en verde.
-7. [ ] NatSpec + custom errors en APIs públicas.
+1. [x] Compila con `pragma solidity 0.8.24`.
+2. [x] Push (Chainlink) y Pull (Pyth) operativos con tests.
+3. [x] Precios stale / round incompleto / inválidos revierten con custom errors.
+4. [x] Fee Pyth insuficiente → `InsufficientFee`.
+5. [x] Fork test de feed mainnet en verde (con RPC).
+6. [x] Fuzz de answers / delays / decimals en verde.
+7. [x] NatSpec + custom errors en APIs públicas.
 8. [ ] `doc/SWC-AUDIT.md` sin vulnerabilidades en alcance v1.
 
 ---
 
 ## 12. Próximo paso
 
-**Fases 0–4 cerradas.** Esperando autorización de **Fase 5** (`PriceOracleConsumer` + e2e / fork / fuzz).
+**Fases 0–5 cerradas.** Esperando autorización de **Fase 6** (gas + Deploy + NatSpec / SWC).
 
-Responde con: **`autorizo Fase 5`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
+Responde con: **`autorizo Fase 6`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
