@@ -1,0 +1,6 @@
+OracleGasTest:testGas_consumer_getPullPrice() (gas: 166531)
+OracleGasTest:testGas_consumer_getPushPrice() (gas: 22816)
+OracleGasTest:testGas_consumer_getPushPriceScaled18() (gas: 24756)
+OracleGasTest:testGas_pull_updateAndGetPrice() (gas: 169786)
+OracleGasTest:testGas_push_getValidatedPrice() (gas: 19849)
+OracleGasTest:testGas_rawLatestRoundData() (gas: 16173)

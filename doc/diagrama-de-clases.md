@@ -1,6 +1,6 @@
 # Diagrama de clases — Decentralized Oracles (Push / Pull)
 
-Vista estructural de contratos, interfaces y relaciones (módulo 13, **planificación v1**).
+Vista estructural de contratos, interfaces y relaciones (módulo 13, **v1 final**).
 
 ## Diagrama (Mermaid)
 
@@ -11,33 +11,32 @@ classDiagram
     class IPriceFeed {
         <<interface>>
         +decimals() uint8
-        +latestPrice() int256
         +getValidatedPrice() int256
     }
 
     class AggregatorV3Interface {
-        <<interface Chainlink>>
+        <<interface Chainlink remapping>>
         +decimals() uint8
         +description() string
         +version() uint256
-        +getRoundData(roundId) roundId_answer_startedAt_updatedAt_answeredInRound
-        +latestRoundData() roundId_answer_startedAt_updatedAt_answeredInRound
+        +getRoundData(roundId) ...
+        +latestRoundData() ...
     }
 
     class IPyth {
-        <<interface Pyth>>
+        <<interface Pyth SDK>>
         +getUpdateFee(updateData) uint256
         +updatePriceFeeds(updateData)
-        +getPrice(priceId) PythPrice
-        +getPriceNoOlderThan(priceId, age) PythPrice
+        +getPriceUnsafe(id) Price
+        +getPriceNoOlderThan(id, age) Price
     }
 
-    class PythPrice {
-        <<struct>>
+    class PythStructs_Price {
+        <<struct SDK>>
         +int64 price
         +uint64 conf
         +int32 expo
-        +uint256 publishTime
+        +uint publishTime
     }
 
     class OracleErrors {
@@ -46,47 +45,49 @@ classDiagram
         +InvalidOraclePrice()
         +OracleRoundIncomplete()
         +InsufficientFee()
+        +ZeroAddress()
+        +InvalidOracleConfig()
+        +EthTransferFailed()
     }
 
     class OracleValidationLib {
         <<library>>
         +validateRound(roundId, answeredInRound)
         +validateFreshness(updatedAt, maxDelay)
-        +validateBounds(answer, minAnswer, maxAnswer)
         +validateAnswer(answer)
+        +validateBounds(answer, min, max)
+        +validateAggregatorRound(...)
+        +validatePullPrice(...)
     }
 
     class PriceScalerLib {
         <<library>>
-        +scale(price, fromDecimals, toDecimals) int256
-        +to18Decimals(price, fromDecimals) int256
+        +MAX_DECIMALS$
+        +scale(price, from, to) int256
+        +to18Decimals(price, from) int256
     }
 
     class MockAggregatorV3 {
         <<contract mock>>
-        +uint8 decimals_
-        +int256 answer
-        +uint256 updatedAt
-        +uint80 roundId
-        +uint80 answeredInRound
         +setRoundData(...)
+        +setLatestAnswer(answer, updatedAt)
+        +decimals() uint8
         +latestRoundData() ...
         +getRoundData(roundId) ...
     }
 
     class MockPyth {
-        <<contract mock>>
-        +uint256 fee
-        +mapping prices
-        +setPrice(priceId, price, publishTime)
+        <<contract mock extends SDK MockPyth>>
+        +createUpdateData(...) bytes
+        +setPrice(...) payable
         +getUpdateFee(updateData) uint256
-        +updatePriceFeeds(updateData)
-        +getPrice(priceId) PythPrice
-        +getPriceNoOlderThan(priceId, age) PythPrice
+        +updatePriceFeeds(updateData) payable
+        +getPriceUnsafe(id) Price
+        +getPriceNoOlderThan(id, age) Price
     }
 
     class ChainlinkPriceFeed {
-        <<contract Push>>
+        <<contract Push IPriceFeed>>
         +AggregatorV3Interface aggregator$
         +uint256 maxDelay$
         +int256 minAnswer$
@@ -98,26 +99,28 @@ classDiagram
     }
 
     class PythPriceFeed {
-        <<contract Pull>>
+        <<contract Pull IPriceFeed>>
         +IPyth pyth$
         +bytes32 priceId$
         +uint256 maxAge$
         +int256 minAnswer$
         +int256 maxAnswer$
-        +constructor(pyth, priceId, maxAge, min, max)
-        +updateAndGetPrice(updateData) int256
-        +getValidatedPrice() int256
+        +constructor(pyth, priceId, maxAge, min, max, decimals)
         +getUpdateFee(updateData) uint256
+        +updateAndGetPrice(updateData) int256 payable
+        +getValidatedPrice() int256
+        +decimals() uint8
     }
 
     class PriceOracleConsumer {
         <<contract>>
-        +IPriceFeed pushFeed
-        +PythPriceFeed pullFeed
+        +IPriceFeed pushFeed$
+        +PythPriceFeed pullFeed$
         +constructor(pushFeed, pullFeed)
         +getPushPrice() int256
-        +getPullPrice(updateData) int256
-        +getPriceScaled18(source) uint256
+        +getPullPrice(updateData) int256 payable
+        +getPushPriceScaled18() uint256
+        +getPullPriceScaled18(updateData) uint256 payable
     }
 
     IPriceFeed <|.. ChainlinkPriceFeed : implements
@@ -135,7 +138,8 @@ classDiagram
     OracleValidationLib ..> OracleErrors : reverts
     ChainlinkPriceFeed ..> OracleErrors : reverts
     PythPriceFeed ..> OracleErrors : reverts
-    IPyth ..> PythPrice : returns
+    PriceOracleConsumer ..> OracleErrors : reverts
+    IPyth ..> PythStructs_Price : returns
 ```
 
 ## Relaciones clave
@@ -145,11 +149,13 @@ classDiagram
 | `ChainlinkPriceFeed` → `AggregatorV3Interface` | Patrón Push: el feed ya está on-chain |
 | `PythPriceFeed` → `IPyth` | Patrón Pull: el caller trae el payload y paga fee |
 | Ambos → `OracleValidationLib` | Misma política de staleness / bounds / answer |
-| `PriceOracleConsumer` → feeds | Fachada para protocolos que no quieren acoplarse al vendor |
-| Mocks implementan interfaces reales | Unit tests sin RPC; fork tests usan contratos mainnet |
+| `PriceOracleConsumer` → feeds | Fachada; Push view + Pull payable con fee exacto y refund al caller |
+| `MockPyth` hereda SDK | `IPyth` completo; helpers `createUpdateData` / `setPrice` |
+| Remappings | Chainlink vía `lib/`; Pyth vía `node_modules/@pythnetwork/...` |
 
-## Notas de diseño
+## Decisiones de diseño (v1)
 
-- `IPriceFeed` unifica lectura; en Pull, la actualización puede ir en `updateAndGetPrice(bytes[])` (payable).
-- Bounds y `maxDelay`/`maxAge` como `immutable` o configurables con `Ownable2Step` (decidir en Fase 3–4).
-- Escalado a 18 decimales ocurre en el consumer o vía `PriceScalerLib`, no dentro del mock.
+- `IPriceFeed` solo `decimals` + `getValidatedPrice`; `latestPrice()` es alias en `ChainlinkPriceFeed`.
+- Bounds, `maxDelay` / `maxAge`, addresses: **immutable** (retune = redeploy).
+- Escalado a 18 decimals solo en el consumer (`getPushPriceScaled18` / `getPullPriceScaled18`).
+- Consumer paga **fee exacto** a `PythPriceFeed` y refunde el exceso al `msg.sender` original.
