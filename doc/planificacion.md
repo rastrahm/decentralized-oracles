@@ -1,6 +1,6 @@
 # Planificación — Módulo 13: Decentralized Oracles & Pyth/Chainlink Push-Pull
 
-**Estado:** Fases **0–1** ✅ completadas. Fases **2–6** ⏳ pendientes de autorización.  
+**Estado:** Fases **0–2** ✅ completadas. Fases **3–6** ⏳ pendientes de autorización.  
 **Regla de avance:** cada fase requiere **autorización explícita** del responsable antes de empezar.
 
 ---
@@ -141,13 +141,13 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 |------|--------|--------|--------------|
 | 0 | Setup Foundry + estructura + deps Chainlink/Pyth | ✅ Completada | ✅ Autorizada |
 | 1 | Interfaces + errors + `OracleValidationLib` + `PriceScalerLib` | ✅ Completada | ✅ Autorizada |
-| 2 | `MockAggregatorV3` + `MockPyth` | ⏳ Pendiente | ❌ Sin autorizar |
+| 2 | `MockAggregatorV3` + `MockPyth` | ✅ Completada | ✅ Autorizada |
 | 3 | `ChainlinkPriceFeed` (Push + validaciones) | ⏳ Pendiente | ❌ Sin autorizar |
 | 4 | `PythPriceFeed` (Pull + fee + update) | ⏳ Pendiente | ❌ Sin autorizar |
 | 5 | `PriceOracleConsumer` + suite e2e / fork / fuzz | ⏳ Pendiente | ❌ Sin autorizar |
 | 6 | Gas profiling + Deploy + NatSpec / SWC hardening | ⏳ Pendiente | ❌ Sin autorizar |
 
-> **Próxima autorización solicitada:** *Fase 2* (mocks AggregatorV3 + Pyth).
+> **Próxima autorización solicitada:** *Fase 3* (`ChainlinkPriceFeed` Push).
 
 ---
 
@@ -199,7 +199,7 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ---
 
-### Fase 2 — Mocks ⏳
+### Fase 2 — Mocks ✅
 
 **Objetivo:** oráculos controlables para unit tests sin mainnet.
 
@@ -209,7 +209,11 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 **Criterio de salida:** mocks permiten forzar todos los caminos de error del módulo.
 
-**Autorización:** esperar *“autorizo Fase 2”*.
+**Hecho (2026-09-10):**
+- `MockAggregatorV3`: `setRoundData`, `setLatestAnswer`, round incompleto, `updatedAt == 0`, answers negativos; error `RoundNotFound`.
+- `MockPyth`: hereda SDK MockPyth (`IPyth` completo); helpers `createUpdateData` / `setPrice`; fee vía `getUpdateFee`; stale con `getPriceNoOlderThan`.
+- Tests: `MockAggregatorV3.t.sol` + `MockPyth.t.sol` (unit + fuzz).
+- **`forge test` → 49 PASS**.
 
 ---
 
@@ -328,6 +332,6 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ## 12. Próximo paso
 
-**Fases 0–1 cerradas.** Esperando autorización de **Fase 2** (`MockAggregatorV3` + `MockPyth`).
+**Fases 0–2 cerradas.** Esperando autorización de **Fase 3** (`ChainlinkPriceFeed` Push + validaciones).
 
-Responde con: **`autorizo Fase 2`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
+Responde con: **`autorizo Fase 3`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
