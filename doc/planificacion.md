@@ -1,6 +1,6 @@
 # Planificación — Módulo 13: Decentralized Oracles & Pyth/Chainlink Push-Pull
 
-**Estado:** Fase **0** ✅ completada. Fases **1–6** ⏳ pendientes de autorización.  
+**Estado:** Fases **0–1** ✅ completadas. Fases **2–6** ⏳ pendientes de autorización.  
 **Regla de avance:** cada fase requiere **autorización explícita** del responsable antes de empezar.
 
 ---
@@ -140,14 +140,14 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 | Fase | Nombre | Estado | Autorización |
 |------|--------|--------|--------------|
 | 0 | Setup Foundry + estructura + deps Chainlink/Pyth | ✅ Completada | ✅ Autorizada |
-| 1 | Interfaces + errors + `OracleValidationLib` + `PriceScalerLib` | ⏳ Pendiente | ❌ Sin autorizar |
+| 1 | Interfaces + errors + `OracleValidationLib` + `PriceScalerLib` | ✅ Completada | ✅ Autorizada |
 | 2 | `MockAggregatorV3` + `MockPyth` | ⏳ Pendiente | ❌ Sin autorizar |
 | 3 | `ChainlinkPriceFeed` (Push + validaciones) | ⏳ Pendiente | ❌ Sin autorizar |
 | 4 | `PythPriceFeed` (Pull + fee + update) | ⏳ Pendiente | ❌ Sin autorizar |
 | 5 | `PriceOracleConsumer` + suite e2e / fork / fuzz | ⏳ Pendiente | ❌ Sin autorizar |
 | 6 | Gas profiling + Deploy + NatSpec / SWC hardening | ⏳ Pendiente | ❌ Sin autorizar |
 
-> **Próxima autorización solicitada:** *Fase 1* (interfaces + libs de validación).
+> **Próxima autorización solicitada:** *Fase 2* (mocks AggregatorV3 + Pyth).
 
 ---
 
@@ -176,7 +176,7 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ---
 
-### Fase 1 — Interfaces + libs de validación ⏳
+### Fase 1 — Interfaces + libs de validación ✅
 
 **Objetivo:** tipos y reglas de validación reutilizables.
 
@@ -188,7 +188,14 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 **Criterio de salida:** libs en verde; reverts correctos ante precio stale / inválido / round incompleto.
 
-**Autorización:** esperar *“autorizo Fase 1”*.
+**Hecho (2026-09-10):**
+- `src/errors/OracleErrors.sol`: `StalePriceFeed`, `InvalidOraclePrice`, `OracleRoundIncomplete`, `InsufficientFee`, `ZeroAddress`, `InvalidOracleConfig`.
+- `src/interfaces/IPriceFeed.sol` (API unificada); Chainlink/Pyth vía remappings de Fase 0.
+- `OracleValidationLib`: round, freshness (incl. `updatedAt == 0` / futuro), answer > 0, bounds, pipelines Push/Pull.
+- `PriceScalerLib`: `scale` / `to18Decimals` con guarda de overflow y max 18 decimals.
+- Tests: `OracleValidationLib.t.sol` + `PriceScalerLib.t.sol` (unit + fuzz 1000).
+- Stub `Placeholder` eliminado.
+- **`forge test` → 30 PASS**.
 
 ---
 
@@ -321,6 +328,6 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ## 12. Próximo paso
 
-**Fase 0 cerrada.** Esperando autorización de **Fase 1** (interfaces + `OracleErrors` + `OracleValidationLib` + `PriceScalerLib`).
+**Fases 0–1 cerradas.** Esperando autorización de **Fase 2** (`MockAggregatorV3` + `MockPyth`).
 
-Responde con: **`autorizo Fase 1`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
+Responde con: **`autorizo Fase 2`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
