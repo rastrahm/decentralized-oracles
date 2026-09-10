@@ -1,6 +1,6 @@
 # Planificación — Módulo 13: Decentralized Oracles & Pyth/Chainlink Push-Pull
 
-**Estado:** Fases **0–2** ✅ completadas. Fases **3–6** ⏳ pendientes de autorización.  
+**Estado:** Fases **0–3** ✅ completadas. Fases **4–6** ⏳ pendientes de autorización.  
 **Regla de avance:** cada fase requiere **autorización explícita** del responsable antes de empezar.
 
 ---
@@ -142,12 +142,12 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 | 0 | Setup Foundry + estructura + deps Chainlink/Pyth | ✅ Completada | ✅ Autorizada |
 | 1 | Interfaces + errors + `OracleValidationLib` + `PriceScalerLib` | ✅ Completada | ✅ Autorizada |
 | 2 | `MockAggregatorV3` + `MockPyth` | ✅ Completada | ✅ Autorizada |
-| 3 | `ChainlinkPriceFeed` (Push + validaciones) | ⏳ Pendiente | ❌ Sin autorizar |
+| 3 | `ChainlinkPriceFeed` (Push + validaciones) | ✅ Completada | ✅ Autorizada |
 | 4 | `PythPriceFeed` (Pull + fee + update) | ⏳ Pendiente | ❌ Sin autorizar |
 | 5 | `PriceOracleConsumer` + suite e2e / fork / fuzz | ⏳ Pendiente | ❌ Sin autorizar |
 | 6 | Gas profiling + Deploy + NatSpec / SWC hardening | ⏳ Pendiente | ❌ Sin autorizar |
 
-> **Próxima autorización solicitada:** *Fase 3* (`ChainlinkPriceFeed` Push).
+> **Próxima autorización solicitada:** *Fase 4* (`PythPriceFeed` Pull).
 
 ---
 
@@ -217,7 +217,7 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ---
 
-### Fase 3 — ChainlinkPriceFeed (Push) ⏳
+### Fase 3 — ChainlinkPriceFeed (Push) ✅
 
 **Objetivo:** lectura segura de AggregatorV3.
 
@@ -227,7 +227,12 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 **Criterio de salida:** camino feliz + todos los reverts de validación Push en verde.
 
-**Autorización:** esperar *“autorizo Fase 3”*.
+**Hecho (2026-09-10):**
+- `ChainlinkPriceFeed`: immutables `aggregator`, `maxDelay`, `minAnswer`, `maxAnswer`; implementa `IPriceFeed`.
+- Constructor: `ZeroAddress` / `InvalidOracleConfig` (maxDelay 0, bounds inválidos).
+- `getValidatedPrice` / `latestPrice` vía `OracleValidationLib.validateAggregatorRound`.
+- Tests: feliz, stale, `updatedAt == 0`, round incompleto, zero/negativo/bounds, fuzz.
+- **`forge test` → 65 PASS**.
 
 ---
 
@@ -332,6 +337,6 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ## 12. Próximo paso
 
-**Fases 0–2 cerradas.** Esperando autorización de **Fase 3** (`ChainlinkPriceFeed` Push + validaciones).
+**Fases 0–3 cerradas.** Esperando autorización de **Fase 4** (`PythPriceFeed` Pull + fee + update).
 
-Responde con: **`autorizo Fase 3`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
+Responde con: **`autorizo Fase 4`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
