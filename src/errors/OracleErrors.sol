@@ -23,3 +23,6 @@ error ZeroAddress();
 
 /// @notice Parámetro de configuración inválido (p. ej. `minAnswer > maxAnswer`, decimals extremos).
 error InvalidOracleConfig();
+
+/// @notice Falló el refund de ETH sobrante tras pagar el fee de Pyth.
+error EthTransferFailed();
