@@ -1,6 +1,6 @@
 # Flujograma — Ciclo completo Push (Chainlink) y Pull (Pyth)
 
-Flujo extremo a extremo entre actores y contratos (módulo 13, **planificación v1**): lectura Push, actualización Pull, validación y consumo.
+Flujo extremo a extremo entre actores y contratos (módulo 13, **v1 final**): lectura Push, actualización Pull, validación y consumo.
 
 ## Actores
 
@@ -10,8 +10,9 @@ Flujo extremo a extremo entre actores y contratos (módulo 13, **planificación 
 | Keeper / Relayer | En Chainlink mantiene el aggregator; en Pyth aporta `priceUpdateData` |
 | Usuario / Tester | En tests: arma mocks o corre fork mainnet |
 | AggregatorV3 (Chainlink) | Almacena rounds on-chain (modelo Push) |
-| Pyth | Verifica attestations y actualiza precios on-demand (modelo Pull) |
-| PriceOracleConsumer | Fachada unificada hacia el protocolo |
+| Pyth (`IPyth`) | Verifica attestations y actualiza precios on-demand (modelo Pull) |
+| `ChainlinkPriceFeed` / `PythPriceFeed` | Wrappers con validación del módulo |
+| `PriceOracleConsumer` | Fachada unificada hacia el protocolo |
 | CI / Foundry | Unit, fork, fuzz, gas |
 
 ---
@@ -20,7 +21,7 @@ Flujo extremo a extremo entre actores y contratos (módulo 13, **planificación 
 
 ```mermaid
 flowchart TD
-    Start([Inicio Push]) --> Req[Protocolo llama getPushPrice / getValidatedPrice]
+    Start([Inicio Push]) --> Req[Protocolo: getPushPrice / getValidatedPrice]
     Req --> Read[ChainlinkPriceFeed lee latestRoundData]
     Read --> Round{¿round completo?}
     Round -->|No| RejR[OracleRoundIncomplete]
@@ -28,7 +29,7 @@ flowchart TD
     Fresh -->|No| RejS[StalePriceFeed]
     Fresh -->|Sí| Bound{¿answer válido y en bounds?}
     Bound -->|No| RejI[InvalidOraclePrice]
-    Bound -->|Sí| Scale[Opcional: scale a 18 decimals]
+    Bound -->|Sí| Scale[Opcional: getPushPriceScaled18]
     Scale --> Use[Protocolo usa el precio]
     Use --> End([Fin — OK])
 
@@ -43,24 +44,21 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    Start([Inicio Pull]) --> Fetch[Off-chain: obtener priceUpdateData\nHermes / API Pyth]
-    Fetch --> Call[Caller: updateAndGetPrice + msg.value]
-    Call --> Fee[pyth.getUpdateFee]
+    Start([Inicio Pull]) --> Fetch[Off-chain: obtener priceUpdateData]
+    Fetch --> Call[Caller: getPullPrice / updateAndGetPrice + msg.value]
+    Call --> Fee[getUpdateFee]
     Fee --> Pay{¿msg.value >= fee?}
     Pay -->|No| RejF[InsufficientFee]
     Pay -->|Sí| Upd[updatePriceFeeds value: fee]
-    Upd --> Get[getPriceNoOlderThan]
-    Get --> Fresh{¿publishTime dentro de maxAge?}
-    Fresh -->|No| RejS[StalePriceFeed]
-    Fresh -->|Sí| Bound{¿price válido y en bounds?}
-    Bound -->|No| RejI[InvalidOraclePrice]
-    Bound -->|Sí| Refund[Refund ETH sobrante]
+    Upd --> Get[getPriceUnsafe + validatePullPrice]
+    Get --> Fresh{¿publishTime / bounds OK?}
+    Fresh -->|No| RejS[StalePriceFeed / InvalidOraclePrice]
+    Fresh -->|Sí| Refund[Refund exceso al caller]
     Refund --> Use[Protocolo usa el precio]
     Use --> End([Fin — OK])
 
     RejF --> EndFail([Fin — rechazo])
     RejS --> EndFail
-    RejI --> EndFail
 ```
 
 ---
@@ -69,13 +67,21 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A([Deploy]) --> B[Deploy / configurar MockAggregatorV3\no address Chainlink mainnet]
-    B --> C[Deploy ChainlinkPriceFeed\nmaxDelay + bounds]
-    C --> D[Deploy MockPyth o address Pyth]
-    D --> E[Deploy PythPriceFeed\npriceId + maxAge + bounds]
-    E --> F[Deploy PriceOracleConsumer\npush + pull]
-    F --> G([Listo para lecturas / updates])
+    A([Deploy.s.sol]) --> B{¿CHAINLINK_AGGREGATOR set?}
+    B -->|No| C[Deploy MockAggregatorV3 + seed]
+    B -->|Sí| D[Usar address env]
+    C --> E{¿PYTH set?}
+    D --> E
+    E -->|No| F[Deploy MockPyth]
+    E -->|Sí| G[Usar address env]
+    F --> H[Deploy ChainlinkPriceFeed]
+    G --> H
+    H --> I[Deploy PythPriceFeed]
+    I --> J[Deploy PriceOracleConsumer]
+    J --> K([Listo — logs de addresses])
 ```
+
+**Mainnet ref documentada:** ETH/USD Chainlink `0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419`
 
 ---
 
@@ -83,7 +89,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[Attacker fuerza precio 0 o negativo en mock] --> B{validateAnswer?}
+    A[Attacker fuerza precio 0 o negativo] --> B{validateAnswer?}
     B -->|Falla| C[InvalidOraclePrice]
 
     D[Attacker usa updatedAt antiguo] --> E{validateFreshness?}
@@ -92,7 +98,7 @@ flowchart TD
     G[Attacker llama Pull sin ETH suficiente] --> H{msg.value >= fee?}
     H -->|No| I[InsufficientFee]
 
-    J[Round manipulado answeredInRound bajo] --> K{validateRound?}
+    J[Round answeredInRound bajo] --> K{validateRound?}
     K -->|Falla| L[OracleRoundIncomplete]
 ```
 
@@ -112,15 +118,15 @@ sequenceDiagram
     Cons->>CL: getValidatedPrice()
     CL->>Agg: latestRoundData()
     Agg-->>CL: roundId, answer, updatedAt, answeredInRound
-    CL->>Lib: validateRound / Freshness / Bounds
+    CL->>Lib: validateAggregatorRound
     Lib-->>CL: OK
     CL-->>Cons: answer
-    Cons-->>Proto: price (opcionalmente scaled)
+    Cons-->>Proto: price
 ```
 
 ---
 
-## Secuencia — camino feliz Pull
+## Secuencia — camino feliz Pull (vía consumer)
 
 ```mermaid
 sequenceDiagram
@@ -131,39 +137,32 @@ sequenceDiagram
     participant Lib as OracleValidationLib
 
     Relayer->>Cons: getPullPrice(updateData) + value
-    Cons->>PF: updateAndGetPrice(updateData)
-    PF->>Pyth: getUpdateFee(updateData)
-    Pyth-->>PF: fee
-    PF->>Pyth: updatePriceFeeds{value: fee}(updateData)
-    PF->>Pyth: getPriceNoOlderThan(priceId, maxAge)
-    Pyth-->>PF: PythPrice
-    PF->>Lib: validateAnswer / Bounds / age
+    Cons->>PF: getUpdateFee(updateData)
+    PF-->>Cons: fee
+    Cons->>PF: updateAndGetPrice{value: fee}(updateData)
+    PF->>Pyth: updatePriceFeeds{value: fee}
+    PF->>Pyth: getPriceUnsafe(priceId)
+    Pyth-->>PF: Price
+    PF->>Lib: validatePullPrice
     Lib-->>PF: OK
     PF-->>Cons: price
-    Cons-->>Relayer: price + refund si aplica
+    Cons-->>Relayer: refund (msg.value - fee) + price
 ```
 
 ---
 
-## Gobernanza de implementación (autorización)
+## Gobernanza de implementación (histórico v1)
 
 ```mermaid
 flowchart LR
-    Doc[doc/ plan + diagramas ✅] --> Gate0{¿autorizo Fase 0?}
-    Gate0 -->|Sí| F0[Setup Foundry]
-    Gate0 -->|No| Wait[Esperar]
-    F0 --> Gate1{¿autorizo Fase 1?}
-    Gate1 -->|Sí| F1[Libs + interfaces]
-    F1 --> Gate2{¿autorizo Fase 2?}
-    Gate2 -->|Sí| F2[Mocks]
-    F2 --> Gate3{¿autorizo Fase 3?}
-    Gate3 -->|Sí| F3[Chainlink Push]
-    F3 --> Gate4{¿autorizo Fase 4?}
-    Gate4 -->|Sí| F4[Pyth Pull]
-    F4 --> Gate5{¿autorizo Fase 5?}
-    Gate5 -->|Sí| F5[Consumer + fork + fuzz]
-    F5 --> Gate6{¿autorizo Fase 6?}
-    Gate6 -->|Sí| F6[Gas + Deploy + SWC]
+    Doc[doc/ ✅] --> F0[Fase 0 Setup ✅]
+    F0 --> F1[Fase 1 Libs ✅]
+    F1 --> F2[Fase 2 Mocks ✅]
+    F2 --> F3[Fase 3 Push ✅]
+    F3 --> F4[Fase 4 Pull ✅]
+    F4 --> F5[Fase 5 Consumer/fork/fuzz ✅]
+    F5 --> F6[Fase 6 Gas/Deploy/SWC ✅]
+    F6 --> Done([Módulo v1 cerrado])
 ```
 
-Sin frase de autorización explícita, **no se avanza** a la siguiente fase.
+Todas las fases **0–6** fueron autorizadas y completadas. Extensiones: ver `planificacion.md` §12.

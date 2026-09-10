@@ -1,17 +1,17 @@
 # Diagrama de flujo — Validación Push / Pull y consumo de precio
 
-Flujos de decisión internos del sistema de oráculos (módulo 13, **planificación v1**).
+Flujos de decisión internos del sistema de oráculos (módulo 13, **v1 final**).
 
 ## 1. Lectura Push — `ChainlinkPriceFeed.getValidatedPrice`
 
 ```mermaid
 flowchart TD
     A[Caller pide precio Push] --> B[aggregator.latestRoundData]
-    B --> C{¿updatedAt == 0?}
+    B --> C{¿updatedAt == 0 o futuro?}
     C -->|Sí| D[Revert StalePriceFeed]
     C -->|No| E{¿answeredInRound < roundId?}
     E -->|Sí| F[Revert OracleRoundIncomplete]
-    E -->|No| G{¿block.timestamp - updatedAt > MAX_DELAY?}
+    E -->|No| G{¿block.timestamp - updatedAt > maxDelay?}
     G -->|Sí| D
     G -->|No| H{¿answer <= 0 o fuera de min/max?}
     H -->|Sí| I[Revert InvalidOraclePrice]
@@ -26,24 +26,45 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[Caller envía priceUpdateData + msg.value] --> B[fee = pyth.getUpdateFee]
+    A[Caller envía updateData + msg.value] --> B[fee = pyth.getUpdateFee]
     B --> C{¿msg.value >= fee?}
     C -->|No| D[Revert InsufficientFee]
     C -->|Sí| E[pyth.updatePriceFeeds value: fee]
-    E --> F[pyth.getPriceNoOlderThan priceId, maxAge]
-    F --> G{¿publishTime fresco / sin stale?}
-    G -->|No| H[Revert StalePriceFeed]
-    G -->|Sí| I{¿price <= 0 o fuera de bounds?}
-    I -->|Sí| J[Revert InvalidOraclePrice]
-    I -->|No| K[Refund ETH sobrante si aplica]
-    K --> L[Retornar price escalado/normalizado]
+    E --> F[pyth.getPriceUnsafe priceId]
+    F --> G[OracleValidationLib.validatePullPrice]
+    G --> H{¿publishTime fresco / answer OK / bounds?}
+    H -->|No| I[StalePriceFeed o InvalidOraclePrice]
+    H -->|Sí| J{¿msg.value > fee?}
+    J -->|Sí| K[Refund exceso a msg.sender]
+    J -->|No| L[Sin refund]
+    K --> M{¿refund OK?}
+    M -->|No| N[Revert EthTransferFailed]
+    M -->|Sí| O[Retornar price]
+    L --> O
     D --> Z[Fin]
-    H --> Z
-    J --> Z
-    L --> Z
+    I --> Z
+    N --> Z
+    O --> Z
 ```
 
-## 3. Validación compartida — `OracleValidationLib`
+## 3. Consumer Pull — `PriceOracleConsumer.getPullPrice`
+
+```mermaid
+flowchart TD
+    A[Caller + msg.value + updateData] --> B[fee = pullFeed.getUpdateFee]
+    B --> C{¿msg.value >= fee?}
+    C -->|No| D[InsufficientFee]
+    C -->|Sí| E[pullFeed.updateAndGetPrice value: fee]
+    E --> F[price validado]
+    F --> G[Refund msg.value - fee al caller]
+    G --> H[Retornar price]
+    D --> Z[Fin]
+    H --> Z
+```
+
+> El consumer envía **fee exacto** al feed (el feed no hace refund en ese path) y refunde el sobrante al usuario.
+
+## 4. Validación compartida — `OracleValidationLib`
 
 ```mermaid
 flowchart TD
@@ -51,7 +72,7 @@ flowchart TD
     B --> C{answeredInRound >= roundId?}
     C -->|No| R1[OracleRoundIncomplete]
     C -->|Sí| D[validateFreshness]
-    D --> E{updatedAt != 0 y age <= maxDelay?}
+    D --> E{updatedAt != 0, no futuro, age <= maxDelay?}
     E -->|No| R2[StalePriceFeed]
     E -->|Sí| F[validateAnswer + validateBounds]
     F --> G{answer > 0 y en min..max?}
@@ -59,20 +80,25 @@ flowchart TD
     G -->|Sí| OK[Validación OK]
 ```
 
-## 4. Escalado de decimales — `PriceScalerLib`
+## 5. Escalado de decimales — `PriceScalerLib`
 
 ```mermaid
 flowchart TD
-    A[price + fromDecimals + toDecimals] --> B{¿from == to?}
-    B -->|Sí| C[Retornar price sin cambio]
-    B -->|No| D{¿from < to?}
-    D -->|Sí| E[Multiplicar por 10^delta]
-    D -->|No| F[Dividir por 10^delta]
-    E --> G[Retornar price escalado]
-    F --> G
+    A[price + fromDecimals + toDecimals] --> B{¿from/to > 18?}
+    B -->|Sí| C[InvalidOracleConfig]
+    B -->|No| D{¿price <= 0?}
+    D -->|Sí| E[InvalidOraclePrice]
+    D -->|No| F{¿from == to?}
+    F -->|Sí| G[Retornar price]
+    F -->|No| H{¿from < to?}
+    H -->|Sí| I[Multiplicar / overflow → InvalidOraclePrice]
+    H -->|No| J[Dividir por 10^delta]
+    I --> K[scaled]
+    J --> K
+    G --> K
 ```
 
-## 5. Ciclo de estados — precio observado
+## 6. Ciclo de estados — precio observado
 
 ```mermaid
 stateDiagram-v2
@@ -97,7 +123,7 @@ stateDiagram-v2
     Consumed --> [*]
 ```
 
-## 6. Regla transversal — nunca confiar en precio crudo
+## 7. Regla transversal — nunca confiar en precio crudo
 
 ```mermaid
 flowchart LR
@@ -106,4 +132,4 @@ flowchart LR
     Y -->|No| NO[Custom error — no fallback silencioso]
 ```
 
-Aplica a: Push `latestRoundData`, Pull post-`updatePriceFeeds`, y cualquier helper del consumer.
+Aplica a: Push `latestRoundData`, Pull post-`updatePriceFeeds`, y helpers del consumer.

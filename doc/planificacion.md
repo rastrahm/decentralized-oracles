@@ -1,6 +1,6 @@
 # Planificación — Módulo 13: Decentralized Oracles & Pyth/Chainlink Push-Pull
 
-**Estado:** Fases **0–5** ✅ completadas. Fase **6** ⏳ pendiente de autorización.  
+**Estado:** Fases **0–6** ✅ completadas. Módulo cerrado a nivel de planificación v1.  
 **Regla de avance:** cada fase requiere **autorización explícita** del responsable antes de empezar.
 
 ---
@@ -33,24 +33,25 @@ Construir un consumidor de precios resiliente y un mock aggregator propios que s
 ### Suite (`evm-smart-contracts-suite`)
 
 - Solidity **exacto** `0.8.24`.
-- OpenZeppelin Contracts v5.x donde aporte valor (p. ej. `Ownable2Step` para admin de bounds).
+- OpenZeppelin Contracts v5.x disponible (v1 no usa Ownable; config **immutable**).
 - Foundry: unit + fuzz (`runs >= 1000`) + fork tests + gas reports.
 - Custom errors (no `require` con strings).
-- CEI / access control en funciones administrativas.
+- CEI en paths Pull (fee → update → validate → refund).
 - NatSpec en toda API pública/externa.
 - Layout: Interfaces → Libraries → Contracts → State → Events → Errors → Modifiers → Functions.
 
-### Módulo 13 (Oracles)
+### Módulo 13 (Oracles) — implementado
 
-- Push: `latestRoundData()` / `getRoundData`; rechazar si `answeredInRound < roundId`, `updatedAt == 0`, o `block.timestamp - updatedAt > MAX_DELAY`.
-- Bounds: precio fuera de `[minAnswer, maxAnswer]` → `InvalidOraclePrice`.
-- Pull: parsear `priceUpdateData`, pagar fee, llamar `updatePriceFeeds{value: fee}`, luego `getPrice` / `getPriceNoOlderThan`.
-- Fee insuficiente → `InsufficientFee`.
-- Escalado de decimales (8 → 18) en lib dedicada cuando el consumidor lo necesite.
+- Push: `latestRoundData()`; rechazar si `answeredInRound < roundId`, `updatedAt == 0`/futuro, o stale.
+- Bounds: precio ≤ 0 o fuera de `[minAnswer, maxAnswer]` → `InvalidOraclePrice`.
+- Pull: `getUpdateFee` → `updatePriceFeeds{value: fee}` → `getPriceUnsafe` + `validatePullPrice`.
+- Fee insuficiente → `InsufficientFee`; refund fallido → `EthTransferFailed`.
+- Escalado 8 → 18 en `PriceScalerLib` vía consumer (`*Scaled18`).
+- Chainlink/Pyth: remappings (`lib/` + `node_modules/`), sin copias locales de interfaces vendor.
 
 ---
 
-## 4. Arquitectura prevista
+## 4. Arquitectura (final v1)
 
 ```
 13-decentralized-oracles/
@@ -61,11 +62,10 @@ Construir un consumidor de precios resiliente y un mock aggregator propios que s
 │   ├── diagrama-de-clases.md
 │   ├── diagrama-de-flujo.md
 │   ├── flujograma.md
-│   ├── SWC-AUDIT.md          # Fase 6
-│   └── GAS.md                # Fase 6
+│   ├── SWC-AUDIT.md
+│   └── GAS.md
 ├── src/
-│   ├── consumer/
-│   │   └── PriceOracleConsumer.sol
+│   ├── consumer/PriceOracleConsumer.sol
 │   ├── feeds/
 │   │   ├── ChainlinkPriceFeed.sol
 │   │   └── PythPriceFeed.sol
@@ -75,16 +75,14 @@ Construir un consumidor de precios resiliente y un mock aggregator propios que s
 │   ├── libraries/
 │   │   ├── OracleValidationLib.sol
 │   │   └── PriceScalerLib.sol
-│   ├── interfaces/
-│   │   ├── IPriceFeed.sol
-│   │   ├── AggregatorV3Interface.sol   # o remapping Chainlink
-│   │   └── IPyth.sol                   # o remapping Pyth
+│   ├── interfaces/IPriceFeed.sol
 │   └── errors/OracleErrors.sol
 ├── test/
 │   ├── helpers/OracleTestBase.sol
 │   ├── OracleValidationLib.t.sol
 │   ├── PriceScalerLib.t.sol
 │   ├── MockAggregatorV3.t.sol
+│   ├── MockPyth.t.sol
 │   ├── ChainlinkPriceFeed.t.sol
 │   ├── PythPriceFeed.t.sol
 │   ├── PriceOracleConsumer.t.sol
@@ -94,6 +92,8 @@ Construir un consumidor de precios resiliente y un mock aggregator propios que s
 ├── script/Deploy.s.sol
 ├── foundry.toml
 ├── remappings.txt
+├── package.json                  # @pythnetwork/pyth-sdk-solidity
+├── .env.example
 └── .gas-snapshot
 ```
 
@@ -101,28 +101,31 @@ Construir un consumidor de precios resiliente y un mock aggregator propios que s
 
 | Contrato / artefacto | Responsabilidad |
 |----------------------|-----------------|
-| `IPriceFeed` | API unificada `getPrice()` / `latestPrice()` normalizada |
-| `ChainlinkPriceFeed` | Lee AggregatorV3; aplica staleness, round y bounds |
-| `PythPriceFeed` | Actualiza con payload + fee; lee precio; valida edad |
-| `PriceOracleConsumer` | Orquesta Push/Pull; expone precio seguro a protocolos |
-| `MockAggregatorV3` | Simula rounds, timestamps y answers para unit tests |
-| `MockPyth` | Simula fee, update y precios firmados simplificados |
-| `OracleValidationLib` | Staleness, round completeness, bounds |
-| `PriceScalerLib` | Escalado entre decimales (8 ↔ 18) |
+| `IPriceFeed` | `decimals()` + `getValidatedPrice()` |
+| `ChainlinkPriceFeed` | Push AggregatorV3 + validación; alias `latestPrice()` |
+| `PythPriceFeed` | Pull: fee → update → validate → refund |
+| `PriceOracleConsumer` | Fachada Push/Pull + `*Scaled18`; fee exacto + refund caller |
+| `MockAggregatorV3` | Rounds/timestamps/answers controlables |
+| `MockPyth` | Wrapper SDK MockPyth + `createUpdateData` / `setPrice` |
+| `OracleValidationLib` | Round, freshness, answer, bounds, pipelines Push/Pull |
+| `PriceScalerLib` | Escalado 8 ↔ 18 con guarda overflow |
 | `OracleErrors` | Custom errors del módulo |
 
 ---
 
-## 5. Errores custom (obligatorios del módulo)
+## 5. Errores custom (módulo)
 
 ```solidity
 error StalePriceFeed();
 error InvalidOraclePrice();
 error OracleRoundIncomplete();
 error InsufficientFee();
+error ZeroAddress();
+error InvalidOracleConfig();
+error EthTransferFailed();
 ```
 
-Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdateFailed()`), siempre como custom errors.
+Obligatorios del `.cursorrules`: los cuatro primeros. Los tres siguientes se añadieron en implementación (config, zero address, refund).
 
 ---
 
@@ -145,9 +148,9 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 | 3 | `ChainlinkPriceFeed` (Push + validaciones) | ✅ Completada | ✅ Autorizada |
 | 4 | `PythPriceFeed` (Pull + fee + update) | ✅ Completada | ✅ Autorizada |
 | 5 | `PriceOracleConsumer` + suite e2e / fork / fuzz | ✅ Completada | ✅ Autorizada |
-| 6 | Gas profiling + Deploy + NatSpec / SWC hardening | ⏳ Pendiente | ❌ Sin autorizar |
+| 6 | Gas profiling + Deploy + NatSpec / SWC hardening | ✅ Completada | ✅ Autorizada |
 
-> **Próxima autorización solicitada:** *Fase 6* (gas + deploy + SWC).
+> **Módulo v1 cerrado.** Extensiones futuras: ver §12.
 
 ---
 
@@ -279,7 +282,7 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 ---
 
-### Fase 6 — Gas + Deploy + hardening ⏳
+### Fase 6 — Gas + Deploy + hardening ✅
 
 1. `script/Deploy.s.sol` (feeds + consumer; addresses de mainnet en comments/env).
 2. `test/gas/Oracle.gas.t.sol` + `.gas-snapshot`.
@@ -287,22 +290,28 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 
 **Criterio de salida:** deploy local reproducible + docs de seguridad + gas documentado.
 
-**Autorización:** esperar *“autorizo Fase 6”*.
+**Hecho (2026-09-10):**
+- `script/Deploy.s.sol` — mocks locales o `CHAINLINK_AGGREGATOR` / `PYTH` / `PYTH_PRICE_ID` vía env; ref mainnet ETH/USD.
+- `test/gas/Oracle.gas.t.sol` + `.gas-snapshot` — raw ~16k, Push ~20–25k, Pull ~167–170k.
+- `doc/SWC-AUDIT.md` (matriz SWC-100–136, estilo módulo 12): **0 vulnerabilidades**; 5 informativos.
+- `doc/GAS.md` + `README.md` raíz del módulo.
+- **`forge test` → 102 PASS**, 3 SKIP (fork sin RPC).
 
 ---
 
-## 8. Matriz de pruebas (objetivo global)
+## 8. Matriz de pruebas (v1 — cubierta)
 
-| Caso | Qué valida |
-|------|------------|
-| Push feliz | `latestRoundData` válido → precio OK |
-| Stale | `updatedAt` viejo → `StalePriceFeed` |
-| Round incompleto | `answeredInRound < roundId` → `OracleRoundIncomplete` |
-| Bounds / zero / negative | → `InvalidOraclePrice` |
-| Pull + fee | update + read; fee baja → `InsufficientFee` |
-| Fork Chainlink | Precio live en mainnet fork |
-| Fuzz answer / delay / decimals | Sin panics; reverts esperados |
-| Gas profiling | Coste Push vs Pull documentado |
+| Caso | Qué valida | Suite |
+|------|------------|-------|
+| Push feliz | `latestRoundData` válido → precio OK | `ChainlinkPriceFeed` / consumer |
+| Stale | `updatedAt` viejo → `StalePriceFeed` | unit + fuzz |
+| Round incompleto | `answeredInRound < roundId` → `OracleRoundIncomplete` | unit + fuzz |
+| Bounds / zero / negative | → `InvalidOraclePrice` | unit + fuzz |
+| Pull + fee | update + read; fee baja → `InsufficientFee` | `PythPriceFeed` / consumer |
+| Pull refund | exceso ETH vuelve al caller | consumer e2e |
+| Scale 8↔18 | `PriceScalerLib` / `*Scaled18` | unit + fuzz |
+| Fork Chainlink | ETH/USD mainnet | `ChainlinkMainnet.fork.t.sol` |
+| Gas profiling | Push vs Pull documentado | `Oracle.gas.t.sol` + `GAS.md` |
 
 ---
 
@@ -316,7 +325,7 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 - [x] Custom errors del módulo.
 - [x] Sin floating pragma; NatSpec en APIs públicas.
 - [x] Suite fork + fuzz.
-- [ ] (Fase 6) SWC-AUDIT + gas.
+- [x] (Fase 6) SWC-AUDIT + gas.
 
 ---
 
@@ -329,8 +338,8 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 | `diagrama-de-clases.md` | Estructura y relaciones | ✅ |
 | `diagrama-de-flujo.md` | Flujos de decisión | ✅ |
 | `flujograma.md` | Flujos actor–sistema e2e | ✅ |
-| `SWC-AUDIT.md` | Matriz SWC-100–136 | ⏳ Fase 6 |
-| `GAS.md` | Optimizaciones y benchmarks | ⏳ Fase 6 |
+| `SWC-AUDIT.md` | Matriz SWC-100–136 | ✅ |
+| `GAS.md` | Optimizaciones y benchmarks | ✅ |
 
 ---
 
@@ -343,12 +352,12 @@ Ampliar solo si hace falta (p. ej. `ZeroAddress()`, `InvalidFeed()`, `PriceUpdat
 5. [x] Fork test de feed mainnet en verde (con RPC).
 6. [x] Fuzz de answers / delays / decimals en verde.
 7. [x] NatSpec + custom errors en APIs públicas.
-8. [ ] `doc/SWC-AUDIT.md` sin vulnerabilidades en alcance v1.
+8. [x] `doc/SWC-AUDIT.md` sin vulnerabilidades en alcance v1.
 
 ---
 
 ## 12. Próximo paso
 
-**Fases 0–5 cerradas.** Esperando autorización de **Fase 6** (gas + Deploy + NatSpec / SWC).
+**Módulo v1 completo (Fases 0–6).** Posibles extensiones: bounds upgradeables, heartbeat Chainlink explícito, e2e Pull mainnet con payload Hermes, invariantes Foundry, multisig/timelock en config.
 
-Responde con: **`autorizo Fase 6`** para continuar. No se implementará código de fases posteriores sin un gate explícito nuevo.
+**Nota:** usa `~/.foundry/bin/forge` (o antepón `$HOME/.foundry/bin` al `PATH`); el `forge` de nvm/npm no es Foundry.
