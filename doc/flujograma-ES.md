@@ -1,5 +1,7 @@
 # Flujograma — Ciclo completo Push (Chainlink) y Pull (Pyth)
 
+> English version: [flujograma-EN.md](./flujograma-EN.md)
+
 Flujo extremo a extremo entre actores y contratos (módulo 13, **v1 final**): lectura Push, actualización Pull, validación y consumo.
 
 ## Actores
@@ -165,4 +167,4 @@ flowchart LR
     F6 --> Done([Módulo v1 cerrado])
 ```
 
-Todas las fases **0–6** fueron autorizadas y completadas. Extensiones: ver `planificacion.md` §12.
+Todas las fases **0–6** fueron autorizadas y completadas. Extensiones: ver `planificacion-ES.md` §12.

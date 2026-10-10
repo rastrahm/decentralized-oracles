@@ -1,5 +1,7 @@
 # Planificación — Módulo 13: Decentralized Oracles & Pyth/Chainlink Push-Pull
 
+> English version: [planificacion-EN.md](./planificacion-EN.md)
+
 **Estado:** Fases **0–6** ✅ completadas. Módulo cerrado a nivel de planificación v1.  
 **Regla de avance:** cada fase requiere **autorización explícita** del responsable antes de empezar.
 
@@ -286,15 +288,15 @@ Obligatorios del `.cursorrules`: los cuatro primeros. Los tres siguientes se añ
 
 1. `script/Deploy.s.sol` (feeds + consumer; addresses de mainnet en comments/env).
 2. `test/gas/Oracle.gas.t.sol` + `.gas-snapshot`.
-3. NatSpec completo; `doc/SWC-AUDIT.md` y `doc/GAS.md` al estilo de módulos previos.
+3. NatSpec completo; `doc/SWC-AUDIT-ES.md` y `doc/GAS-ES.md` al estilo de módulos previos.
 
 **Criterio de salida:** deploy local reproducible + docs de seguridad + gas documentado.
 
 **Hecho (2026-09-10):**
 - `script/Deploy.s.sol` — mocks locales o `CHAINLINK_AGGREGATOR` / `PYTH` / `PYTH_PRICE_ID` vía env; ref mainnet ETH/USD.
 - `test/gas/Oracle.gas.t.sol` + `.gas-snapshot` — raw ~16k, Push ~20–25k, Pull ~167–170k.
-- `doc/SWC-AUDIT.md` (matriz SWC-100–136, estilo módulo 12): **0 vulnerabilidades**; 5 informativos.
-- `doc/GAS.md` + `README.md` raíz del módulo.
+- `doc/SWC-AUDIT-ES.md` (matriz SWC-100–136, estilo módulo 12): **0 vulnerabilidades**; 5 informativos.
+- `doc/GAS-ES.md` + `README-ES.md` raíz del módulo.
 - **`forge test` → 102 PASS**, 3 SKIP (fork sin RPC).
 
 ---
@@ -311,7 +313,7 @@ Obligatorios del `.cursorrules`: los cuatro primeros. Los tres siguientes se añ
 | Pull refund | exceso ETH vuelve al caller | consumer e2e |
 | Scale 8↔18 | `PriceScalerLib` / `*Scaled18` | unit + fuzz |
 | Fork Chainlink | ETH/USD mainnet | `ChainlinkMainnet.fork.t.sol` |
-| Gas profiling | Push vs Pull documentado | `Oracle.gas.t.sol` + `GAS.md` |
+| Gas profiling | Push vs Pull documentado | `Oracle.gas.t.sol` + `GAS-ES.md` |
 
 ---
 
@@ -333,13 +335,13 @@ Obligatorios del `.cursorrules`: los cuatro primeros. Los tres siguientes se añ
 
 | Archivo | Contenido | Estado |
 |---------|-----------|--------|
-| `README.md` | Índice de esta carpeta | ✅ |
-| `planificacion.md` | Este documento (fases + gates) | ✅ |
-| `diagrama-de-clases.md` | Estructura y relaciones | ✅ |
-| `diagrama-de-flujo.md` | Flujos de decisión | ✅ |
-| `flujograma.md` | Flujos actor–sistema e2e | ✅ |
-| `SWC-AUDIT.md` | Matriz SWC-100–136 | ✅ |
-| `GAS.md` | Optimizaciones y benchmarks | ✅ |
+| `README-ES.md` | Índice de esta carpeta | ✅ |
+| `planificacion-ES.md` | Este documento (fases + gates) | ✅ |
+| `diagrama-de-clases-ES.md` | Estructura y relaciones | ✅ |
+| `diagrama-de-flujo-ES.md` | Flujos de decisión | ✅ |
+| `flujograma-ES.md` | Flujos actor–sistema e2e | ✅ |
+| `SWC-AUDIT-ES.md` | Matriz SWC-100–136 | ✅ |
+| `GAS-ES.md` | Optimizaciones y benchmarks | ✅ |
 
 ---
 
@@ -352,7 +354,7 @@ Obligatorios del `.cursorrules`: los cuatro primeros. Los tres siguientes se añ
 5. [x] Fork test de feed mainnet en verde (con RPC).
 6. [x] Fuzz de answers / delays / decimals en verde.
 7. [x] NatSpec + custom errors en APIs públicas.
-8. [x] `doc/SWC-AUDIT.md` sin vulnerabilidades en alcance v1.
+8. [x] `doc/SWC-AUDIT-ES.md` sin vulnerabilidades en alcance v1.
 
 ---
 

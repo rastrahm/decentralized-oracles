@@ -1,5 +1,7 @@
 # Diagrama de flujo — Validación Push / Pull y consumo de precio
 
+> English version: [diagrama-de-flujo-EN.md](./diagrama-de-flujo-EN.md)
+
 Flujos de decisión internos del sistema de oráculos (módulo 13, **v1 final**).
 
 ## 1. Lectura Push — `ChainlinkPriceFeed.getValidatedPrice`
