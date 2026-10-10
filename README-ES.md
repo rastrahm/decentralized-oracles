@@ -1,9 +1,10 @@
 # Módulo 13 — Decentralized Oracles (Push / Pull)
+> English version: [README-EN.md](./README-EN.md)
 
 Consumidor resiliente de precios con **Chainlink Push** (`AggregatorV3Interface`) y **Pyth Pull** (`IPyth`), Foundry y Solidity `0.8.24`.
 
 **Estado:** v1 completo (Fases 0–6) · **Tests:** `forge test` → **102 PASS** / 3 SKIP (fork sin RPC)  
-**Auditoría:** [`doc/SWC-AUDIT.md`](./doc/SWC-AUDIT.md) — **0 vulnerabilidades** · Gas: [`doc/GAS.md`](./doc/GAS.md)
+**Auditoría:** [`doc/SWC-AUDIT-ES.md`](./doc/SWC-AUDIT-ES.md) — **0 vulnerabilidades** · Gas: [`doc/GAS-ES.md`](./doc/GAS-ES.md)
 
 ---
 
@@ -87,7 +88,7 @@ forge script script/Deploy.s.sol:Deploy --rpc-url http://127.0.0.1:8545 --broadc
 | Pull `updateAndGetPrice` | ~169 786 |
 | Consumer Pull | ~166 531 |
 
-Detalle: [`doc/GAS.md`](./doc/GAS.md) · regenerar con `forge snapshot --match-contract OracleGasTest`.
+Detalle: [`doc/GAS-ES.md`](./doc/GAS-ES.md) · regenerar con `forge snapshot --match-contract OracleGasTest`.
 
 ---
 
@@ -118,9 +119,9 @@ Detalle: [`doc/GAS.md`](./doc/GAS.md) · regenerar con `forge snapshot --match-c
 
 | Doc | Contenido |
 |-----|-----------|
-| [`doc/planificacion.md`](./doc/planificacion.md) | Fases TDD + gates (0–6 ✅) |
-| [`doc/diagrama-de-clases.md`](./doc/diagrama-de-clases.md) | UML v1 final |
-| [`doc/diagrama-de-flujo.md`](./doc/diagrama-de-flujo.md) | Decisiones validación / fee / refund |
-| [`doc/flujograma.md`](./doc/flujograma.md) | e2e Push/Pull + deploy |
-| [`doc/SWC-AUDIT.md`](./doc/SWC-AUDIT.md) | Matriz SWC-100–136 |
-| [`doc/GAS.md`](./doc/GAS.md) | Push vs Pull baseline |
+| [`doc/planificacion-ES.md`](./doc/planificacion-ES.md) | Fases TDD + gates (0–6 ✅) |
+| [`doc/diagrama-de-clases-ES.md`](./doc/diagrama-de-clases-ES.md) | UML v1 final |
+| [`doc/diagrama-de-flujo-ES.md`](./doc/diagrama-de-flujo-ES.md) | Decisiones validación / fee / refund |
+| [`doc/flujograma-ES.md`](./doc/flujograma-ES.md) | e2e Push/Pull + deploy |
+| [`doc/SWC-AUDIT-ES.md`](./doc/SWC-AUDIT-ES.md) | Matriz SWC-100–136 |
+| [`doc/GAS-ES.md`](./doc/GAS-ES.md) | Push vs Pull baseline |

@@ -1,4 +1,5 @@
 # Optimización de gas — Decentralized Oracles (Push / Pull)
+> English version: [GAS-EN.md](./GAS-EN.md)
 
 Regenerar:
 
@@ -75,4 +76,4 @@ forge script script/Deploy.s.sol:Deploy --rpc-url $MAINNET_RPC_URL --broadcast
 
 Ver `script/Deploy.s.sol` para env.
 
-README: [`../README.md`](../README.md) · Índice docs: [`README.md`](./README.md)
+README: [`../README-ES.md`](../README-ES.md) · Índice docs: [`README-ES.md`](./README-ES.md)

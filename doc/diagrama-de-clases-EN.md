@@ -1,8 +1,10 @@
-# Diagrama de clases — Decentralized Oracles (Push / Pull)
+# Class diagram — Decentralized Oracles (Push / Pull)
 
-Vista estructural de contratos, interfaces y relaciones (módulo 13, **v1 final**).
+> Versión en español: [diagrama-de-clases-ES.md](./diagrama-de-clases-ES.md)
 
-## Diagrama (Mermaid)
+Structural view of contracts, interfaces, and relationships (module 13, **final v1**).
+
+## Diagram (Mermaid)
 
 ```mermaid
 classDiagram
@@ -142,20 +144,20 @@ classDiagram
     IPyth ..> PythStructs_Price : returns
 ```
 
-## Relaciones clave
+## Key relationships
 
-| Relación | Motivo |
+| Relationship | Reason |
 |----------|--------|
-| `ChainlinkPriceFeed` → `AggregatorV3Interface` | Patrón Push: el feed ya está on-chain |
-| `PythPriceFeed` → `IPyth` | Patrón Pull: el caller trae el payload y paga fee |
-| Ambos → `OracleValidationLib` | Misma política de staleness / bounds / answer |
-| `PriceOracleConsumer` → feeds | Fachada; Push view + Pull payable con fee exacto y refund al caller |
-| `MockPyth` hereda SDK | `IPyth` completo; helpers `createUpdateData` / `setPrice` |
-| Remappings | Chainlink vía `lib/`; Pyth vía `node_modules/@pythnetwork/...` |
+| `ChainlinkPriceFeed` → `AggregatorV3Interface` | Push pattern: the feed is already on-chain |
+| `PythPriceFeed` → `IPyth` | Pull pattern: the caller brings the payload and pays the fee |
+| Both → `OracleValidationLib` | Same staleness / bounds / answer policy |
+| `PriceOracleConsumer` → feeds | Facade; view Push + payable Pull with exact fee and refund to the caller |
+| `MockPyth` inherits the SDK | Full `IPyth`; helpers `createUpdateData` / `setPrice` |
+| Remappings | Chainlink via `lib/`; Pyth via `node_modules/@pythnetwork/...` |
 
-## Decisiones de diseño (v1)
+## Design decisions (v1)
 
-- `IPriceFeed` solo `decimals` + `getValidatedPrice`; `latestPrice()` es alias en `ChainlinkPriceFeed`.
+- `IPriceFeed` only has `decimals` + `getValidatedPrice`; `latestPrice()` is an alias in `ChainlinkPriceFeed`.
 - Bounds, `maxDelay` / `maxAge`, addresses: **immutable** (retune = redeploy).
-- Escalado a 18 decimals solo en el consumer (`getPushPriceScaled18` / `getPullPriceScaled18`).
-- Consumer paga **fee exacto** a `PythPriceFeed` y refunde el exceso al `msg.sender` original.
+- Scaling to 18 decimals only in the consumer (`getPushPriceScaled18` / `getPullPriceScaled18`).
+- The consumer pays the **exact fee** to `PythPriceFeed` and refunds the excess to the original `msg.sender`.

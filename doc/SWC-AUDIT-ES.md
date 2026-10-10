@@ -1,5 +1,7 @@
 # Auditoría SWC — Decentralized Oracles (Push / Pull)
 
+> English version: [SWC-AUDIT-EN.md](./SWC-AUDIT-EN.md)
+
 Verificación del consumidor de precios y wrappers Chainlink/Pyth contra el [SWC Registry](https://swcregistry.io/) (EIP-1470) y principios del monorepo (custom errors, pragma fijo, staleness, bounds, fee Pull).
 
 > **Nota:** El SWC Registry no se mantiene activamente desde ~2020. Complementar con [SCSVS](https://github.com/ComposableSecurity/SCSVS), [EEA EthTrust](https://entethalliance.org/specs/ethtrust/) y guías de [Chainlink](https://docs.chain.link/data-feeds/price-feeds) / [Pyth](https://docs.pyth.network/).
@@ -17,7 +19,7 @@ Chainlink `AggregatorV3Interface` (brownie-contracts 1.3.0), `@pythnetwork/pyth-
 **Referencia tests:** `test/ChainlinkPriceFeed.t.sol`, `test/PythPriceFeed.t.sol`, `test/PriceOracleConsumer.t.sol`,  
 `test/OracleValidationLib.t.sol`, `test/PriceScalerLib.t.sol`, `test/fork/`, `test/fuzz/`, `test/gas/`  
 **Estilo:** alineado a [`12-account-abstraction/doc/SWC-AUDIT.md`](../../12-account-abstraction/doc/SWC-AUDIT.md)  
-**Índice docs:** [`README.md`](./README.md) · README módulo: [`../README.md`](../README.md)
+**Índice docs:** [`README-ES.md`](./README-ES.md) · README módulo: [`../README-ES.md`](../README-ES.md)
 
 ---
 
@@ -127,7 +129,7 @@ Payloads Pyth grandes aumentan fee y gas. Responsabilidad del caller / relayer.
 | Fork mainnet opcional | ✅ | `test/fork/ChainlinkMainnet.fork.t.sol` |
 | Sin floating pragma | ✅ | `0.8.24` |
 | Sin ETH `transfer`/`send` | ✅ | Solo `.call{value}` |
-| Gas profiling Push vs Pull | ✅ | `doc/GAS.md` |
+| Gas profiling Push vs Pull | ✅ | `doc/GAS-ES.md` |
 
 ---
 
@@ -147,7 +149,7 @@ Payloads Pyth grandes aumentan fee y gas. Responsabilidad del caller / relayer.
 |---|--------|--------|
 | 1 | `script/Deploy.s.sol` | Deploy reproducible local / cableado env mainnet |
 | 2 | `test/gas/Oracle.gas.t.sol` + `.gas-snapshot` | Push vs Pull vs raw |
-| 3 | `doc/SWC-AUDIT.md` / `doc/GAS.md` | Matriz SWC-100–136 + benchmarks |
+| 3 | `doc/SWC-AUDIT-ES.md` / `doc/GAS-ES.md` | Matriz SWC-100–136 + benchmarks |
 | 4 | README módulo | Operación / env / estructura |
 
 ### Observaciones no bloqueantes (v2)
@@ -204,5 +206,5 @@ Total: 102 PASS / 0 FAIL / 3 SKIP
 - [Chainlink Price Feeds](https://docs.chain.link/data-feeds/price-feeds)
 - [Pyth EVM Pull](https://docs.pyth.network/price-feeds/core/use-real-time-data/pull-integration/evm)
 - Módulo 12: [`12-account-abstraction/doc/SWC-AUDIT.md`](../../12-account-abstraction/doc/SWC-AUDIT.md)
-- Gas: [`GAS.md`](./GAS.md)
-- Plan: [`planificacion.md`](./planificacion.md)
+- Gas: [`GAS-ES.md`](./GAS-ES.md)
+- Plan: [`planificacion-ES.md`](./planificacion-ES.md)
